@@ -18,6 +18,8 @@ from tqdm.auto import tqdm
 import wandb
 import torch.distributed as dist
 
+from mdt.models.mdtv_agent import MDTVAgent
+from mdt.models.mdt_agent import MDTAgent
 from mdt.evaluation.multistep_sequences import get_sequences
 from mdt.evaluation.utils import get_default_beso_and_env, get_env_state_for_initial_condition, join_vis_lang
 from mdt.utils.utils import get_last_checkpoint
@@ -169,6 +171,7 @@ def evaluate_sequence(
         print()
         print(f"Evaluating sequence: {' -> '.join(eval_sequence)}")
         print("Subtask: ", end="")
+        # import pdb; pdb.set_trace()
     for subtask in eval_sequence:
         if record:
             rollout_video.new_subtask()
@@ -186,6 +189,7 @@ def rollout(env, model, task_oracle, cfg, subtask, lang_embeddings, val_annotati
     if cfg.debug:
         print(f"{subtask} ", end="")
         time.sleep(0.5)
+        # import pdb; pdb.set_trace()
     obs = env.get_obs()
     # get lang annotation for subtask
     lang_annotation = val_annotations[subtask][0]
@@ -244,6 +248,52 @@ def main(cfg):
             device_id=cfg.device,
         )
 
+        # add hooks to measure the parameters of the model
+        def count_parameters(model):
+            return sum(p.numel() for p in model.parameters())
+        # submodules in model (MDTVAgent) is named as 
+        # img_encoder(VoltronTokenEncoder), perceiver(PerceiverResampler), visual_goal(mdt.models.perceptual_encoders.vision_clip.DefaultVisionClip), language_goal(mdt.models.networks.clip_lang_encoder.LangClip), model(mdt.models.edm_diffusion.score_wrappers.GCDenoiser), clip_proj(ClipStyleProjection).
+        if isinstance(model, MDTVAgent):
+            submodules = {
+                "img_encoder": model.img_encoder,
+                "perceiver": model.perceiver,
+                "visual_goal": model.visual_goal,
+                "language_goal": model.language_goal,
+                "model": model.model,
+                "model.encoder": model.model.inner_model.encoder,
+                "model.decoder": model.model.inner_model.decoder,
+                "clip_proj": model.clip_proj
+            }
+        elif isinstance(model, MDTAgent):
+            # submodules in model (MDTAgent) is named as 
+            # static_resnet(BesoResNetEncoder), gripper_resnet(BesoResNetEncoder), visual_goal(mdt.models.perceptual_encoders.vision_clip.DefaultVisionClip), language_goal(mdt.models.networks.clip_lang_encoder.LangClip), model(hydra.utils.instantiate(model)), clip_proj(ClipStyleProjection).
+            submodules = {
+                "static_resnet": model.static_resnet,
+                "gripper_resnet": model.gripper_resnet,
+                "visual_goal": model.visual_goal,
+                "language_goal": model.language_goal,
+                "model": model.model,
+                "model.encoder": model.model.inner_model.encoder,
+                "model.decoder": model.model.inner_model.decoder,
+                "clip_proj": model.clip_proj
+            }
+        else:
+            raise NotImplementedError("model is not an instance of MDTAgent | MDTVAgent")
+
+        for name, submodule in submodules.items():
+            num_params = count_parameters(submodule)
+            logger.info(f"{name} - Number of parameters: {num_params / 1e6} M")
+
+        # register hooks to counting the forward time.
+        from mdt.utils.hooks import start_time_setup_hook, execute_time_record_hook, execution_times, parameters_table, write_to_excel, print_table
+        from functools import partial
+        hook_handles = []
+        if cfg.log_inference_time:
+            for name, submodule in submodules.items():
+                logger.info(f"registering execute time hooks for {name}")
+                hook_handles.append(submodule.register_forward_pre_hook(start_time_setup_hook))
+                hook_handles.append(submodule.register_forward_hook(partial(execute_time_record_hook, name)))
+
         print(cfg.num_sampling_steps, cfg.sampler_type, cfg.multistep, cfg.sigma_min, cfg.sigma_max, cfg.noise_scheduler)
         model.num_sampling_steps = cfg.num_sampling_steps
         model.sampler_type = cfg.sampler_type
@@ -265,13 +315,17 @@ def main(cfg):
             run = wandb.init(
                 project='calvin_eval',
                 entity=cfg.wandb.entity,
-                group=cfg.model_name + cfg.sampler_type + '_' + str(cfg.num_sampling_steps) + '_steps_' + str(cfg.cond_lambda) + '_c_' + str(cfg.num_sequences) + '_rollouts_',
+                name=cfg.model_name + cfg.sampler_type + '_' + str(cfg.num_sampling_steps) + '_steps_' + str(cfg.cond_lambda) + '_c_' + str(cfg.num_sequences) + '_rollouts_',
                 config=dict(cfg),
                 dir=log_dir / "wandb",
             )
 
             results[checkpoint], plans[checkpoint] = evaluate_policy(model, env, lang_embeddings, cfg, num_videos=cfg.num_videos, save_dir=Path(log_dir))
             print_and_save(results, plans, cfg, log_dir=log_dir)
+
+            # write down execute time
+            # global execution_times, parameters_table
+            # write_to_excel(execution_times, f"{log_dir}/execution_times.csv")
             run.finish()
 
 

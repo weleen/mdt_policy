@@ -18,9 +18,9 @@ render: False
 log_wandb: True
 wandb:
   entity: yimingwu0
-debug: False
-dataset_path: /home/yiming/project/Applications/Agent/mdt_policy/dataset/dataset/task_ABC_D
-train_folder: /home/yiming/project/Applications/Agent/mdt_policy/pretrained_models/CALVIN ABCD/mdtv_1_abcd
+debug: False 
+dataset_path: /home/yiming/project/MyProjects/LightVLA/examples/mdt/dataset/dataset/task_D_D
+train_folder: /home/yiming/project/MyProjects/LightVLA/examples/mdt/pretrained_models/CALVIN D/mdtv_3_d
 model_name: mdt_test
 device: 0
 sampler_type: ddim
@@ -34,3 +34,4 @@ noise_scheduler: exponential
 # sigma_min: null
 # sigma_max: null
 # noise_scheduler: null
+log_inference_time: False

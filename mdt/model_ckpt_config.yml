@@ -1,0 +1,725 @@
+callbacks:
+  rollout_lh:
+    tasks:
+      _target_: calvin_env.envs.tasks.Tasks
+      tasks:
+        rotate_red_block_right:
+        - rotate_object
+        - block_red
+        - -60
+        rotate_red_block_left:
+        - rotate_object
+        - block_red
+        - 60
+        rotate_blue_block_right:
+        - rotate_object
+        - block_blue
+        - -60
+        rotate_blue_block_left:
+        - rotate_object
+        - block_blue
+        - 60
+        rotate_pink_block_right:
+        - rotate_object
+        - block_pink
+        - -60
+        rotate_pink_block_left:
+        - rotate_object
+        - block_pink
+        - 60
+        push_red_block_right:
+        - push_object
+        - block_red
+        - 0.1
+        - 0
+        push_red_block_left:
+        - push_object
+        - block_red
+        - -0.1
+        - 0
+        push_blue_block_right:
+        - push_object
+        - block_blue
+        - 0.1
+        - 0
+        push_blue_block_left:
+        - push_object
+        - block_blue
+        - -0.1
+        - 0
+        push_pink_block_right:
+        - push_object
+        - block_pink
+        - 0.1
+        - 0
+        push_pink_block_left:
+        - push_object
+        - block_pink
+        - -0.1
+        - 0
+        move_slider_left:
+        - move_door_rel
+        - base__slide
+        - 0.15
+        move_slider_right:
+        - move_door_rel
+        - base__slide
+        - -0.15
+        open_drawer:
+        - move_door_rel
+        - base__drawer
+        - 0.12
+        close_drawer:
+        - move_door_rel
+        - base__drawer
+        - -0.12
+        lift_red_block_table:
+        - lift_object
+        - block_red
+        - 0.05
+        - table
+        - base_link
+        lift_red_block_slider:
+        - lift_object
+        - block_red
+        - 0.03
+        - table
+        - plank_link
+        lift_red_block_drawer:
+        - lift_object
+        - block_red
+        - 0.05
+        - table
+        - drawer_link
+        lift_blue_block_table:
+        - lift_object
+        - block_blue
+        - 0.05
+        - table
+        - base_link
+        lift_blue_block_slider:
+        - lift_object
+        - block_blue
+        - 0.03
+        - table
+        - plank_link
+        lift_blue_block_drawer:
+        - lift_object
+        - block_blue
+        - 0.05
+        - table
+        - drawer_link
+        lift_pink_block_table:
+        - lift_object
+        - block_pink
+        - 0.05
+        - table
+        - base_link
+        lift_pink_block_slider:
+        - lift_object
+        - block_pink
+        - 0.03
+        - table
+        - plank_link
+        lift_pink_block_drawer:
+        - lift_object
+        - block_pink
+        - 0.05
+        - table
+        - drawer_link
+        place_in_slider:
+        - place_object
+        - table
+        - plank_link
+        place_in_drawer:
+        - place_object
+        - table
+        - drawer_link
+        stack_block:
+        - stack_objects
+        unstack_block:
+        - unstack_objects
+        turn_on_lightbulb:
+        - toggle_light
+        - lightbulb
+        - 0
+        - 1
+        turn_off_lightbulb:
+        - toggle_light
+        - lightbulb
+        - 1
+        - 0
+        turn_on_led:
+        - toggle_light
+        - led
+        - 0
+        - 1
+        turn_off_led:
+        - toggle_light
+        - led
+        - 1
+        - 0
+        push_into_drawer:
+        - push_object_into
+        - - block_red
+          - block_blue
+          - block_pink
+        - table
+        - base_link
+        - table
+        - drawer_link
+    val_annotations:
+      rotate_red_block_right:
+      - take the red block and rotate it to the right
+      rotate_red_block_left:
+      - take the red block and rotate it to the left
+      rotate_blue_block_right:
+      - take the blue block and rotate it to the right
+      rotate_blue_block_left:
+      - take the blue block and rotate it to the left
+      rotate_pink_block_right:
+      - take the pink block and rotate it to the right
+      rotate_pink_block_left:
+      - take the pink block and rotate it to the left
+      push_red_block_right:
+      - go push the red block right
+      push_red_block_left:
+      - go push the red block left
+      push_blue_block_right:
+      - go push the blue block right
+      push_blue_block_left:
+      - go push the blue block left
+      push_pink_block_right:
+      - go push the pink block right
+      push_pink_block_left:
+      - go push the pink block left
+      move_slider_left:
+      - push the sliding door to the left side
+      move_slider_right:
+      - push the sliding door to the right side
+      open_drawer:
+      - pull the handle to open the drawer
+      close_drawer:
+      - push the handle to close the drawer
+      lift_red_block_table:
+      - grasp and lift the red block
+      lift_blue_block_table:
+      - grasp and lift the blue block
+      lift_pink_block_table:
+      - grasp and lift the pink block
+      lift_red_block_slider:
+      - lift the red block from the sliding cabinet
+      lift_blue_block_slider:
+      - lift the blue block from the sliding cabinet
+      lift_pink_block_slider:
+      - lift the pink block from the sliding cabinet
+      lift_red_block_drawer:
+      - Take the red block from the drawer
+      lift_blue_block_drawer:
+      - Take the blue block from the drawer
+      lift_pink_block_drawer:
+      - Take the pink block from the drawer
+      place_in_slider:
+      - store the grasped block in the sliding cabinet
+      place_in_drawer:
+      - store the grasped block in the drawer
+      push_into_drawer:
+      - slide the block that it falls into the drawer
+      stack_block:
+      - stack the grasped block
+      unstack_block:
+      - remove the stacked block
+      turn_on_lightbulb:
+      - use the switch to turn on the light bulb
+      turn_off_lightbulb:
+      - use the switch to turn off the light bulb
+      turn_on_led:
+      - press the button to turn on the led light
+      turn_off_led:
+      - press the button to turn off the led light
+    _target_: mdt.rollout.rollout_long_horizon.RolloutLongHorizon
+    _recursive_: false
+    env_cfg:
+      _target_: mdt.wrappers.hulc_wrapper.HulcWrapper
+    skip_epochs: ${rollout_lh_skip_epochs}
+    rollout_freq: 5
+    num_videos: 0
+    num_sequences: 1000
+    replan_freq: 30
+    ep_len: 360
+    empty_cache: false
+    log_video_to_file: false
+    save_dir: ./videos
+    lang_folder: ${lang_folder}
+    debug: false
+  checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    save_top_k: 1
+    verbose: true
+    monitor: eval_lh/avg_seq_len
+    mode: max
+    dirpath: saved_models
+    filename: '{epoch:02d}_{eval_lh/avg_seq_len:.2f}'
+    every_n_epochs: ${callbacks.rollout_lh.rollout_freq}
+  ema:
+    _target_: mdt.callbacks.ema.EMA
+    decay: 0.999
+    start_step: 0
+    save_ema_weights_in_callback_state: true
+    evaluate_ema_weights_instead: true
+    power: 0.6666666666666666
+    inv_gamma: 1.0
+    min_value: 0.0
+    max_value: 0.9999
+datamodule:
+  datasets:
+    lang_dataset:
+      _target_: mdt.datasets.disk_dataset.ExtendedDiskDataset
+      key: lang
+      save_format: npz
+      batch_size: ${batch_size}
+      min_window_size: ${min_window_size}
+      max_window_size: ${max_window_size}
+      proprio_state: ${datamodule.proprioception_dims}
+      obs_space: ${datamodule.observation_space}
+      skip_frames: 1
+      pad: false
+      lang_folder: ${lang_folder}
+      aux_lang_loss_window: 8
+      num_workers: ${num_workers}
+      geometric_p_value: 0.1
+      window_sampling_strategy: ${window_sampling_strategy}
+      action_seq_len: ${act_seq_len}
+      obs_seq_len: ${obs_seq_len}
+      future_range: ${future_range}
+      img_gen_frame_diff: ${img_gen_frame_diff}
+    vision_dataset:
+      _target_: mdt.datasets.disk_dataset.ExtendedDiskDataset
+      key: vis
+      save_format: npz
+      batch_size: ${batch_size} # 128
+      min_window_size: ${min_window_size} # 21
+      max_window_size: ${max_window_size} # 50
+      proprio_state: ${datamodule.proprioception_dims} # 8
+      obs_space: ${datamodule.observation_space} # 384
+      pad: false
+      lang_folder: ${lang_folder} # lang_clip_resnet50
+      num_workers: ${num_workers} # 12
+      window_sampling_strategy: ${window_sampling_strategy} # geometric
+      geometric_p_value: 0.1
+      action_seq_len: ${act_seq_len} # 10
+      obs_seq_len: ${obs_seq_len} # 1
+      future_range: ${future_range} # 29
+      img_gen_frame_diff: ${img_gen_frame_diff} # 3
+  transforms:
+    train:
+      rgb_static:
+      - _target_: torchvision.transforms.Resize
+        size: 224
+        antialias: true
+      - _target_: mdt.utils.transforms.RandomShiftsAug
+        pad: 10
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      gen_static:
+      - _target_: torchvision.transforms.Resize
+        size: ${gen_img_res}
+        antialias: true
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      rgb_gripper:
+      - _target_: torchvision.transforms.Resize
+        size: 84
+        antialias: true
+      - _target_: mdt.utils.transforms.RandomShiftsAug
+        pad: 4
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      gen_gripper:
+      - _target_: torchvision.transforms.Resize
+        size: 112
+        antialias: true
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      depth_static:
+      - _target_: torchvision.transforms.Resize
+        size: 200
+      - _target_: mdt.utils.transforms.AddDepthNoise
+        shape:
+        - 1000.0
+        rate:
+        - 1000.0
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+      depth_gripper:
+      - _target_: torchvision.transforms.Resize
+        size: 84
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+      rgb_tactile:
+      - _target_: torchvision.transforms.Resize
+        size: 70
+      - _target_: torchvision.transforms.RandomCrop
+        size: 64
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.5
+        std:
+        - 0.5
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+      depth_tactile:
+      - _target_: torchvision.transforms.Resize
+        size: 64
+        antialias: true
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.1
+        std:
+        - 0.2
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+      robot_obs:
+      - _target_: mdt.utils.transforms.NormalizeVector
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+      scene_obs:
+      - _target_: mdt.utils.transforms.NormalizeVector
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+      language:
+      - _target_: mdt.utils.transforms.AddGaussianNoise
+        mean:
+        - 0.0
+        std:
+        - 0.01
+    val:
+      rgb_static:
+      - _target_: torchvision.transforms.Resize
+        size: 224
+        antialias: true
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      rgb_gripper:
+      - _target_: torchvision.transforms.Resize
+        size: 84
+        antialias: true
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      gen_static:
+      - _target_: torchvision.transforms.Resize
+        size: 112
+        antialias: true
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      gen_gripper:
+      - _target_: torchvision.transforms.Resize
+        size: 112
+        antialias: true
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.48145466
+        - 0.4578275
+        - 0.40821073
+        std:
+        - 0.26862954
+        - 0.26130258
+        - 0.27577711
+      depth_static:
+      - _target_: torchvision.transforms.Resize
+        size: 200
+      depth_gripper:
+      - _target_: torchvision.transforms.Resize
+        size: 84
+      rgb_tactile:
+      - _target_: torchvision.transforms.Resize
+        size: 70
+      - _target_: torchvision.transforms.RandomCrop
+        size: 64
+      - _target_: mdt.utils.transforms.ScaleImageTensor
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.5
+        std:
+        - 0.5
+      depth_tactile:
+      - _target_: torchvision.transforms.Resize
+        size: 64
+      - _target_: torchvision.transforms.Normalize
+        mean:
+        - 0.1
+        std:
+        - 0.2
+      robot_obs:
+      - _target_: mdt.utils.transforms.NormalizeVector
+      scene_obs:
+      - _target_: mdt.utils.transforms.NormalizeVector
+  _target_: mdt.datasets.hulc_data_module.HulcDataModule
+  _recursive_: false
+  root_data_dir: ${root_data_dir}
+  action_space: 7
+  action_max:
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+  action_min:
+  - -1.0
+  - -1.0
+  - -1.0
+  - -1.0
+  - -1.0
+  - -1.0
+  - -1
+  shuffle_val: false
+  observation_space:
+    rgb_obs:
+    - rgb_static
+    - rgb_gripper
+    - gen_static
+    - gen_gripper
+    depth_obs: []
+    state_obs:
+    - robot_obs
+    actions:
+    - rel_actions
+    language:
+    - language
+  proprioception_dims:
+    n_state_obs: 8
+    keep_indices:
+    - - 0
+      - 7
+    - - 14
+      - 15
+    robot_orientation_idx:
+    - 3
+    - 6
+    normalize: true
+    normalize_robot_orientation: true
+model:
+  language_goal:
+    _target_: mdt.models.networks.clip_lang_encoder.LangClip
+    _recursive_: false
+    model_name: ${clip_lang_model_name} # ViT-B/32
+  visual_goal:
+    _target_: mdt.models.perceptual_encoders.vision_clip.DefaultVisionClip
+    freeze_backbone: true
+    model_name: ${vis_clip_model_name} # ViT-B/16
+    device: ${device}
+  img_gen:
+    _target_: mdt.models.img_generation.masked_transformer_decoder.MaskedTransformerImgDecoder
+    _recursive_: false
+    resolution: ${gen_img_res} # 112
+    patch_size: 16
+    decoder_depth: 6
+    decoder_embed_dim: 192
+    context_dim: ${model.latent_dim} # 384
+    decoder_n_heads: 8
+    mlp_ratio: 4
+    in_channels: 3
+    norm_pixel_loss: true
+    num_images: 2
+    mask_ratio: 0.75
+    symmetric_mask: true
+    img_gen_frame_diff: ${img_gen_frame_diff} # 3
+  model:
+    _target_: mdt.models.edm_diffusion.score_wrappers.GCDenoiser
+    _recursive_: false
+    sigma_data: 0.5
+    inner_model:
+      _target_: mdt.models.networks.mdtv_transformer.MDTVTransformer
+      action_dim: 7
+      obs_dim: 384
+      goal_dim: ${goal_dim} # 512
+      proprio_dim: 8
+      goal_conditioned: true
+      embed_dim: 384
+      n_dec_layers: 4
+      n_enc_layers: 4
+      n_obs_token: ${num_tokens_voltron} # 3
+      goal_seq_len: ${goal_window_size} # 1
+      obs_seq_len: ${obs_seq_len} # 1
+      action_seq_len: ${act_seq_len} # 10
+      embed_pdrob: 0
+      goal_drop: 0
+      attn_pdrop: 0.3
+      resid_pdrop: 0.1
+      mlp_pdrop: 0.05
+      n_heads: 8
+      device: ${device}
+      linear_output: true
+      use_rot_embed: false
+      use_abs_pos_emb: true
+      bias: false
+      use_ada_conditioning: true
+      use_noise_encoder: false
+      use_modality_encoder: true
+      use_mlp_goal: true
+  _target_: mdt.models.mdtv_agent.MDTVAgent
+  _recursive_: false
+  latent_dim: 384
+  multistep: 10
+  sampler_type: ddim
+  num_sampling_steps: 10
+  sigma_data: 0.5
+  sigma_min: 0.001
+  sigma_max: 80
+  noise_scheduler: exponential
+  sigma_sample_density_type: loglogistic
+  use_lr_scheduler: true
+  act_window_size: 10
+  cont_alpha: 1.0
+  masked_beta: 1.0
+  use_distributed_clip: false
+  use_text_not_embedding: true
+  ckpt_path: null
+  seed: ${seed}
+  perceiver_depth: 6
+  perceiver_heads: 8
+  perceiver_dim_head: 64
+  perceiver_num_time_embeds: 1
+  perceiver_dim: 384
+  num_latents: 3
+  voltron_cache: /home/hk-project-robolear/ft4740/code/calvin_d/pretrained_model_weights
+  optimizer:
+    _target_: torch.optim.AdamW
+    transformer_weight_decay: 0.05
+    obs_encoder_weight_decay: 0.05
+    learning_rate: 0.0001
+    betas:
+    - 0.9
+    - 0.9
+  lr_scheduler:
+    lr_scheduler:
+      init_lr: 0.0001
+      init_lr_scale: 0.1
+      final_lr_scale: 1.0e-06
+      total_steps: 50000
+      phase_ratio: (0.02, 0.08, 0.9)
+      lr: 0.0001
+root_data_dir: /hkfs/work/workspace/scratch/ft4740-play3/data/task_ABCD_D
+lang_folder: lang_clip_resnet50
+vis_clip_model_name: ViT-B/16
+clip_lang_model_name: ViT-B/32
+log_dir: /home/hk-project-sustainebot/ft4740/code/mdt_policy/logs
+slurm: false
+min_window_size: 21
+max_window_size: 50
+future_range: 29
+seed: 242
+device: cuda
+batch_size: 128
+devices: 4
+goal_window_size: 1
+act_dim: 7
+obs_dim: 384
+goal_dim: 512
+obs_seq_len: 1
+act_seq_len: 10
+multistep: 10
+p_last_state: 0
+gen_img_res: 112
+max_epochs: 40
+rollout_lh_skip_epochs: 29
+window_sampling_strategy: geometric
+num_tokens_voltron: 3
+num_workers: 12
+img_gen_frame_diff: 3
+benchmark_name: calvin_abcd
+trainer:
+  gpus: ${devices}
+  precision: 16
+  max_epochs: ${max_epochs}
+  sync_batchnorm: false
+  accelerator: auto
+  limit_train_batches: 1000
+  limit_val_batches: 4
+logger:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  save_dir: .
+  name: logger
+  group: mdt
+  log_model: false
+  project: ${benchmark_name}
+  entity: bennoq
+  id: ???

@@ -74,10 +74,10 @@ class MDTVTransformer(nn.Module):
         self.n_obs_token = n_obs_token
         self.use_ada_conditioning = use_ada_conditioning
 
-        block_size = goal_seq_len + action_seq_len + obs_seq_len * self.n_obs_token + 2
+        block_size = goal_seq_len + action_seq_len + obs_seq_len * self.n_obs_token + 2  # 1 + 10 + 1 * 3 + 2 = 16
         self.action_seq_len = action_seq_len
         self.use_modality_encoder = use_modality_encoder
-        seq_size = goal_seq_len + obs_seq_len * self.n_obs_token + action_seq_len
+        seq_size = goal_seq_len + obs_seq_len * self.n_obs_token + action_seq_len # 1 + 1 * 3 + 10 = 14
         print(f"obs dim: {obs_dim}, goal_dim: {goal_dim}, action_dim: {action_dim}, proprio_dim: {proprio_dim}")
         self.tok_emb = nn.Linear(obs_dim, embed_dim)
         if use_mlp_goal:
@@ -112,33 +112,33 @@ class MDTVTransformer(nn.Module):
         self.latent_encoder_emb = None
 
         self.encoder = TransformerEncoder(
-            embed_dim=embed_dim,
-            n_heads=n_heads,
-            attn_pdrop=attn_pdrop,
-            resid_pdrop=resid_pdrop,
-            n_layers=n_enc_layers,
-            block_size=block_size,
-            bias=bias,
-            use_rot_embed=use_rot_embed,
-            rotary_xpos=rotary_xpos,
-            mlp_pdrop=mlp_pdrop,
+            embed_dim=embed_dim, # 384
+            n_heads=n_heads, # 8
+            attn_pdrop=attn_pdrop, # 0.3
+            resid_pdrop=resid_pdrop, # 0.1
+            n_layers=n_enc_layers, # 4
+            block_size=block_size, # 16
+            bias=bias, # False
+            use_rot_embed=use_rot_embed, # False
+            rotary_xpos=rotary_xpos, # False
+            mlp_pdrop=mlp_pdrop, # 0.05
         )
 
         if self.use_ada_conditioning:
             self.decoder = TransformerFiLMDecoder(
-                embed_dim=embed_dim,
-                n_heads=n_heads,
-                attn_pdrop=attn_pdrop,
-                resid_pdrop=resid_pdrop,
-                n_layers=n_dec_layers,
-                film_cond_dim=embed_dim,
-                block_size=block_size,
-                bias=bias,
-                use_rot_embed=use_rot_embed,
-                rotary_xpos=rotary_xpos,
-                mlp_pdrop=mlp_pdrop,
-                use_cross_attention=True,
-                use_noise_encoder=use_noise_encoder,
+                embed_dim=embed_dim, # 384
+                n_heads=n_heads, # 8
+                attn_pdrop=attn_pdrop, # 0.3
+                resid_pdrop=resid_pdrop, # 0.1
+                n_layers=n_dec_layers, # 4
+                film_cond_dim=embed_dim, # 384
+                block_size=block_size, # 16
+                bias=bias, # False
+                use_rot_embed=use_rot_embed, # False
+                rotary_xpos=rotary_xpos, # False
+                mlp_pdrop=mlp_pdrop, # 0.05
+                use_cross_attention=True, # True
+                use_noise_encoder=use_noise_encoder, # False
             )
         else:
             self.decoder = TransformerDecoder(
