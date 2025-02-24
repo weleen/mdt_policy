@@ -47,6 +47,8 @@ def train(cfg: DictConfig) -> None:
     # chk = get_last_checkpoint(Path('/home/temp_store/code/calvin_d/logs/runs/2023-09-10/17-52-50/saved_models/epoch=09_eval_lh/avg_seq_len=2.62.ckpt'))
     # Load Model
     if chk is not None:
+        # from mdt.mdt.evaluation.utils import load_class
+        # model = load_class(cfg.model["_target_"]).load_from_checkpoint(chk.as_posix())
         model = getattr(models_m, cfg.model["_target_"].split(".")[-1]).load_from_checkpoint(chk.as_posix())
     else:
         model = hydra.utils.instantiate(cfg.model)
@@ -177,7 +179,7 @@ if __name__ == "__main__":
 
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,4,5"
     print(torch.cuda.is_available())
     print(torch.cuda.device_count())
     os.environ["TOKENIZERS_PARALLELISM"] = 'True'
