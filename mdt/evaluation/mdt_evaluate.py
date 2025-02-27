@@ -285,7 +285,7 @@ def main(cfg):
             logger.info(f"{name} - Number of parameters: {num_params / 1e6} M")
 
         # register hooks to counting the forward time.
-        from mdt.utils.hooks import start_time_setup_hook, execute_time_record_hook, execution_times, parameters_table, write_to_excel, print_table
+        from lightvla.hooks import start_time_setup_hook, execute_time_record_hook, execution_times, parameters_table, write_to_excel, print_table
         from functools import partial
         hook_handles = []
         if cfg.log_inference_time:

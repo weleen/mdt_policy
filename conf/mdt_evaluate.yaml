@@ -34,4 +34,4 @@ noise_scheduler: exponential
 # sigma_min: null
 # sigma_max: null
 # noise_scheduler: null
-log_inference_time: False
+log_inference_time: True 
