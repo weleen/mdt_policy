@@ -1,0 +1,33 @@
+# --find-links https://download.pytorch.org/whl/cu116/torch_stable
+# Add these lines instead
+--find-links https://download.pytorch.org/whl/cu124
+torch==2.4.0
+torchvision==0.17.0
+# cmake
+ #wheel
+# setuptools==57.5.0
+# pyhash==0.9.3
+numpy>1.2
+hydra-core==1.1.1
+hydra-colorlog
+matplotlib
+opencv-python
+omegaconf
+plotly
+ftfy
+torchsde
+torchdiffeq
+transformers==4.25.1
+vit-pytorch==1.4.4
+pytorch-lightning==1.9.5
+voltron-robotics
+gitpython
+scipy
+sentence-transformers
+einops
+gym
+moviepy
+tqdm
+termcolor
+wandb
+einops_exts
