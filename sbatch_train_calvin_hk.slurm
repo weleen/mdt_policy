@@ -9,8 +9,8 @@
 #SBATCH --comment=LightVLA
 ###SBATCH -o std.out.%j
 ###SBATCH -e std.err.%j
-#SBATCH -o /public/home/group_xudong/yimingwu/BASE/mdt_calvin_hk/std.out.%j
-#SBATCH -e /public/home/group_xudong/yimingwu/BASE/mdt_calvin_hk/std.err.%j
+#SBATCH -o /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/jobs/mdt_calvin_hk/std.out.%j
+#SBATCH -e /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/jobs/mdt_calvin_hk/std.err.%j
 
 
 #########################################################
@@ -21,7 +21,7 @@
 
 ### Get parameters from GUI
 
-MIDFILE_DIR=/public/home/group_xudong/yimingwu/BASE/mdt_calvin_hk/.portal
+MIDFILE_DIR=/public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/jobs/mdt_calvin_hk/.portal
 source $MIDFILE_DIR/job_portal.var
 source $MIDFILE_DIR/job_interface.var
 
@@ -53,7 +53,8 @@ echo -e "\n"  | tee -a $LOG_FILE
 
 # Activate the virtualenv / conda environment
 cd /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt
-conda activate mdt_env
+conda init;
+conda activate mdt_env;
 
 export TORCH_USE_CUDA_DSA=1
 # NNODES=1
