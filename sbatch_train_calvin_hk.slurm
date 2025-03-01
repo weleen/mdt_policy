@@ -53,6 +53,7 @@ echo -e "\n"  | tee -a $LOG_FILE
 
 # Activate the virtualenv / conda environment
 cd /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt
+conda activate mdt_env
 
 export TORCH_USE_CUDA_DSA=1
 # NNODES=1
@@ -61,7 +62,7 @@ export TORCH_USE_CUDA_DSA=1
 # MASTER_ADDR=127.0.0.1
 #CUDA_VISIBLE_DEVICES=0,1,2,3  
 
-python mdt/training.py
+srun python mdt/training.py
 
   # MARK_BASH #Don't delete this line!!!
 
