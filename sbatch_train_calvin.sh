@@ -22,7 +22,7 @@
 # Activate the virtualenv / conda environment
 cd /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt
 
-bash install.sh
+# bash install.sh
 
 export TORCH_USE_CUDA_DSA=1
 # NNODES=1
