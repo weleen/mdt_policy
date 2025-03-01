@@ -39,7 +39,7 @@ class HulcDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         root_data_path = Path(root_data_dir)
         if not root_data_path.is_absolute():
-            root_data_path = Path(mdt.__file__).parent / root_data_path
+            root_data_path = Path(mdt.__path__[0]).parent / root_data_path
         self.training_dir = root_data_path / "training"
         self.val_dir = root_data_path / "validation"
         self.shuffle_val = shuffle_val
