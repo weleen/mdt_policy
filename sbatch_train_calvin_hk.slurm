@@ -19,9 +19,10 @@
 
 ### Get parameters from GUI
 
-MIDFILE_DIR=/public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/jobs/mdt_calvin_hk/.portal
-source $MIDFILE_DIR/job_portal.var
-source $MIDFILE_DIR/job_interface.var
+# Remove references to portal files that don't exist
+# MIDFILE_DIR=/public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/jobs/mdt_calvin_hk/.portal
+# source $MIDFILE_DIR/job_portal.var
+# source $MIDFILE_DIR/job_interface.var
 
 ### Set basic var   ### MARK_slurm2pbs
 
@@ -56,13 +57,13 @@ cd /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt
 
 # Properly activate conda environment
 # Use the full path to conda and source the conda.sh file
-source $(conda info --base)/etc/profile.d/conda.sh
+source /public/home/group_xudong/yimingwu/miniconda3/etc/profile.d/conda.sh
 conda activate mdt_env
 
 # Set environment variables
 export TORCH_USE_CUDA_DSA=1
 
-# Run the training script
-srun python mdt/training.py
+# Run the training script with full path
+python mdt/training.py
 
 echo "The end time is: `date +"%Y-%m-%d %H:%M:%S"` | tee -a $LOG_FILE"
