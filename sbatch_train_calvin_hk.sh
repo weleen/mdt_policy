@@ -1,12 +1,12 @@
 #!/bin/bash 
 #SBATCH -J mdt_calvin_hk
-#SBATCH -p high
+#SBATCH -p gpux
 #SBATCH -n 4       # Number of tasks
 #SBATCH -c 16  # Number of cores per task
-#SBATCH --ntasks-per-node=16
+#SBATCH --ntasks-per-node=4
 #SBATCH --gres=gpu:4
 #SBATCH --time 72:00:00
-#SBATCH --comment=BASE 
+#SBATCH --comment=LightVLA
 ###SBATCH -o std.out.%j
 ###SBATCH -e std.err.%j
 #SBATCH -o /public/home/group_xudong/yimingwu/BASE/mdt_calvin_hk/std.out.%j
