@@ -32,7 +32,8 @@ perceiver_num_time_embeds: 1
 perceiver_dim: 384
 num_latents: 3
 
-voltron_cache: ./pretrained_models/vcache
+voltron_cache: /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/pretrained_models/vcache
+# voltron_cache: /home/yiming/pretrained_models/mdt_policy/vcache
 
 optimizer:
   _target_: torch.optim.AdamW

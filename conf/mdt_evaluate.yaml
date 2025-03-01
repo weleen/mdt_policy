@@ -8,7 +8,8 @@ eval_cfg_overwrite:
       lang_dataset:
         lang_folder: lang_annotations
   overwrite_module_cfg:
-    voltron_cache: ./pretrained_models/vcache
+    voltron_cache: /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/pretrained_models/vcache
+    # voltron_cache: /home/yiming/project/MyProjects/LightVLA/examples/mdt/pretrained_models/vcache
 
 ep_len: 360
 num_sequences: 1000
@@ -19,8 +20,10 @@ log_wandb: True
 wandb:
   entity: yimingwu0
 debug: False 
-dataset_path: ./dataset/dataset/task_D_D
-train_folder: ./pretrained_models/CALVIN D/mdtv_3_d
+dataset_path: /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/dataset/dataset/task_D_D
+train_folder: /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/pretrained_models/CALVIN D/mdtv_3_d
+# dataset_path: /home/yiming/project/MyProjects/LightVLA/examples/mdt/dataset/dataset/task_D_D
+# train_folder: /home/yiming/project/MyProjects/LightVLA/examples/mdt/pretrained_models/CALVIN D/mdtv_3_d
 model_name: mdt_test
 device: 0
 sampler_type: ddim
