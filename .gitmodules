@@ -1,3 +1,3 @@
 [submodule "calvin_env"]
 	path = calvin_env
-	url = git@github.com:weleen/calvin_env.git
+	url = git@gitee.com:weleen/calvin_env.git
