@@ -2,7 +2,7 @@
 #SBATCH -J mdt_calvin_hk
 #SBATCH -p gpux
 #SBATCH -n 4       # Number of tasks
-#SBATCH -c 16      # Number of cores per task
+#SBATCH -c 24      # Number of cores per task
 #SBATCH --ntasks-per-node=4
 #SBATCH --gres=gpu:4
 #SBATCH --time 72:00:00
