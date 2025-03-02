@@ -2,7 +2,7 @@
 #SBATCH -J mdt_calvin_hk
 #SBATCH -p gpux
 #SBATCH -n 4       # Number of tasks
-#SBATCH -c 24      # Number of cores per task
+#SBATCH -c 16      # Number of cores per task
 #SBATCH --ntasks-per-node=4
 #SBATCH --gres=gpu:4
 #SBATCH --time 72:00:00
@@ -27,6 +27,7 @@
 ### Set basic var   ### MARK_slurm2pbs
 
 WORK_DIR=/public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt/jobs/mdt_calvin_hk
+mkdir -p $WORK_DIR
 JOB_NAME=mdt_calvin_hk
 JOBID=$SLURM_JOB_ID
 NP=$SLURM_NPROCS
@@ -52,6 +53,12 @@ echo -e "\n" | tee -a $LOG_FILE
 # Run the application
 echo "Running the application..." | tee -a $LOG_FILE
 
+# 设置分布式训练所需的环境变量
+export MASTER_ADDR=$(hostname -i)
+export MASTER_PORT=$(( 10000 + $RANDOM % 20000 ))
+export WORLD_SIZE=4
+# export PYTHONPATH=/public/home/group_xudong/yimingwu/project/MyProjects/LightVLA:$PYTHONPATH
+
 # Change to the project directory
 cd /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt
 
@@ -64,6 +71,7 @@ conda activate mdt_env
 export TORCH_USE_CUDA_DSA=1
 
 # Run the training script with full path
-python mdt/training.py
+srun --ntasks=4 --ntasks-per-node=4 --cpus-per-task=16 --gres=gpu:4 \
+  python mdt/training.py
 
 echo "The end time is: `date +"%Y-%m-%d %H:%M:%S"` | tee -a $LOG_FILE"

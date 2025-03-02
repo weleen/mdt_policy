@@ -13,16 +13,14 @@
 
 
 # Define the paths for storing output and error files
-# %SBATCH --output=/home/hk-project-robolear/ft4740/code/beso_calvin/logs/outputs/%x_%j.out
-# %SBATCH --error=/home/hk-project-robolear/ft4740/code/beso_calvin/logs/outputs/%x_%j.err
+#SBATCH --output=/home/hk-project-robolear/ft4740/code/beso_calvin/logs/outputs/%x_%j.out
+#SBATCH --error=/home/hk-project-robolear/ft4740/code/beso_calvin/logs/outputs/%x_%j.err
 
 
 # -------------------------------
 
 # Activate the virtualenv / conda environment
-cd /public/home/group_xudong/yimingwu/project/MyProjects/LightVLA/examples/mdt
-
-# bash install.sh
+conda activate mdt_env
 
 export TORCH_USE_CUDA_DSA=1
 # NNODES=1
