@@ -1,0 +1,4 @@
+coremltools>=8.0
+huggingface-hub==0.24.6
+scikit-learn
+safetensors

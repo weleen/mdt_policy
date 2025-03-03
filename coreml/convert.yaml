@@ -1,0 +1,37 @@
+eval_cfg_overwrite:
+  datamodule:
+    datasets:
+      lang_dataset:
+        lang_folder: lang_annotations
+  overwrite_module_cfg:
+    voltron_cache: /Users/wuyiming/Project/MyProjects/LightVLA/pretrained_models/mdt/vcache
+
+train_folder: /Users/wuyiming/Project/MyProjects/LightVLA//pretrained_models/mdt/CALVIN D/mdtv_3_d
+ep_len: 360
+num_sequences: 1000
+num_videos: 10
+lang_embeddings: null
+debug: False
+sampler_type: ddim
+multistep: 10
+num_sampling_steps: 10
+cond_lambda: 1
+cfg_value: 1
+sigma_min: 1.0 # 0.001 # 1.0
+sigma_max: 80
+noise_scheduler: exponential
+
+# coreml
+convert_voltron: True 
+convert_language_goal: False
+convert_visual_goal: False
+convert_gcdenoiser: False 
+output_dir: mdt_mlpackage
+check_output_correctness: True # bug
+compute_unit: "ALL"
+clean_output_dir: False 
+bundle_resources: False
+
+hydra:
+  run:
+    dir: ./mlpackage/
