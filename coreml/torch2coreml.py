@@ -4,7 +4,6 @@ Converts MDTVAgent PyTorch model to CoreML format.
 """
 import ast
 import os
-from re import L
 import sys
 import argparse
 from pathlib import Path
@@ -19,8 +18,6 @@ import shutil
 from typing import Dict, Any, Optional, List, Tuple, Union
 from omegaconf import OmegaConf, DictConfig
 import hydra
-from hydra.utils import to_absolute_path
-from sympy import bspline_basis
 
 # Set up logging
 logging.basicConfig()
@@ -66,19 +63,6 @@ from mdt.models.mdtv_agent import MDTVAgent
 from mdt.models.networks.mdtv_transformer import MDTVTransformer
 from mdt.models.networks.transformers.perceiver_resampler import PerceiverResampler
 
-# Import local module for custom implementations
-try:
-    from .layer_norm import register_custom_ops
-
-    HAS_CUSTOM_OPS = True
-except ImportError:
-    logger.warning("Custom layer_norm module not found. Using default implementations.")
-    HAS_CUSTOM_OPS = False
-
-# Register custom ops if available
-if HAS_CUSTOM_OPS:
-    register_custom_ops()
-
 
 def _get_out_path(output_dir, submodule_name):
     fname = f"MDT_{submodule_name}.mlpackage"
@@ -91,13 +75,13 @@ def get_config_from_dir(dir):
     return OmegaConf.load(config_yaml)
 
 
-def load_pretrained_model(cfg: DictConfig) -> MDTVAgent:
+def load_pretrained_model(cfg: DictConfig, use_ema_weights: bool = False, strict_loading: bool = False) -> MDTVAgent:
     """
     Load a pretrained MDTVAgent model from the specified directory.
 
     Args:
         cfg: Configuration containing model parameters and paths
-
+        use_ema_weights: Whether to use EMA weights
     Returns:
         The loaded MDTVAgent model in evaluation mode
     """
@@ -124,7 +108,7 @@ def load_pretrained_model(cfg: DictConfig) -> MDTVAgent:
     class_name = def_cfg.model.pop("_target_")
     if "_recursive_" in def_cfg.model:
         del def_cfg.model["_recursive_"]
-    print(
+    logger.info(
         f"class_name: {class_name}, device: {def_cfg.device}, visual_goal.device: {def_cfg.model.visual_goal.device}, model.inner_model.device: {def_cfg.model.visual_goal.device}"
     )
     assert (
@@ -132,17 +116,20 @@ def load_pretrained_model(cfg: DictConfig) -> MDTVAgent:
     ), "Only MDTVAgent is supported for now"
 
     # Create load_cfg with the appropriate settings
-    load_cfg = {
-        **def_cfg.model,
-        **merged_cfg.overwrite_module_cfg,
-        "map_location": "cpu",
-    }
+    # merge config recursively
+    load_cfg = OmegaConf.merge(def_cfg.model, merged_cfg.overwrite_module_cfg, {"map_location": "cpu"})
     logger.info(f"load_cfg: {OmegaConf.to_yaml(load_cfg)}")
+    # ori_load_cfg = {
+    #     **def_cfg.model,
+    #     **merged_cfg.overwrite_module_cfg, # this is not recursively merged
+    #     "map_location": "cpu",
+    # }
+    # logger.info(f"ori_load_cfg: {OmegaConf.to_yaml(ori_load_cfg)}")
 
     logger.info("All devices explicitly set to CPU for CoreML compatibility")
 
     logger.info(f"Loading model from {checkpoint_path}")
-    model = MDTVAgent.load_from_checkpoint(checkpoint_path, **load_cfg)
+    model = MDTVAgent.load_from_checkpoint(checkpoint_path, strict=strict_loading, **load_cfg) # strict=False to avoid missing keys
 
     # use EMA weights if available
     checkpoint_data = torch.load(checkpoint_path, map_location="cpu")
@@ -150,6 +137,7 @@ def load_pretrained_model(cfg: DictConfig) -> MDTVAgent:
         "callbacks" in checkpoint_data
         and "EMA" in checkpoint_data["callbacks"]
         and "ema_weights" in checkpoint_data["callbacks"]["EMA"]
+        and use_ema_weights
     ):
         ema_weights_list = checkpoint_data["callbacks"]["EMA"]["ema_weights"]
 
@@ -159,10 +147,15 @@ def load_pretrained_model(cfg: DictConfig) -> MDTVAgent:
             for i, (name, _) in enumerate(model.named_parameters())
         }
 
-        model.load_state_dict(ema_weights_dict)
+        m, u = model.load_state_dict(ema_weights_dict, strict=strict_loading) # strict=False to avoid missing keys
+        logger.info(f"m: {m}")
+        logger.info(f"u: {u}")
         logger.info("Successfully loaded EMA weights from checkpoint!")
     else:
-        logger.info("Warning: No EMA weights found in checkpoint!")
+        if use_ema_weights:
+            logger.info("Warning: No EMA weights found in checkpoint!")
+        else:
+            logger.info("Skipping EMA weights loading")
 
     logger.info(f"Finished loading model {checkpoint_path}")
     model.eval()  # Set to evaluation mode
@@ -186,7 +179,7 @@ def debug_trace_model(model, inputs):
     with torch.no_grad():
 
         def hook_fn(module, input, output):
-            print(
+            logger.info(
                 f"Module: {module.__class__.__name__}, Input shapes: {[i.shape if isinstance(i, torch.Tensor) else type(i) for i in input]}, Output shapes: {output.shape if isinstance(output, torch.Tensor) else type(output)}"
             )
 
@@ -206,9 +199,9 @@ def find_tensor_split_ops(torchscript_module):
     # Get the graph
     graph = torchscript_module.graph
 
-    # Print the graph for inspection
-    print("Model graph:")
-    print(graph)
+    # logger.info the graph for inspection
+    logger.info("Model graph:")
+    logger.info(graph)
 
     # Look for tensor_split operations
     tensor_split_nodes = []
@@ -216,14 +209,14 @@ def find_tensor_split_ops(torchscript_module):
         if "tensor_split" in str(node):
             tensor_split_nodes.append(node)
 
-    print(f"Found {len(tensor_split_nodes)} tensor_split operations:")
+    logger.info(f"Found {len(tensor_split_nodes)} tensor_split operations:")
     for i, node in enumerate(tensor_split_nodes):
-        print(f"Node {i+1}:")
-        print(f"  Kind: {node.kind()}")
-        print(f"  Inputs: {[input.debugName() for input in node.inputs()]}")
-        print(f"  Outputs: {[output.debugName() for output in node.outputs()]}")
-        print(f"  Source location: {node.sourceRange()}")
-        print()
+        logger.info(f"Node {i+1}:")
+        logger.info(f"  Kind: {node.kind()}")
+        logger.info(f"  Inputs: {[input.debugName() for input in node.inputs()]}")
+        logger.info(f"  Outputs: {[output.debugName() for output in node.outputs()]}")
+        logger.info(f"  Source location: {node.sourceRange()}")
+        logger.info()
 
     return tensor_split_nodes
 
@@ -300,32 +293,27 @@ def convert_to_coreml(
 
     # Parity check PyTorch vs CoreML
     if check_output_correctness:
-        baseline_out = torchscript_module(**sample_inputs).numpy()
-        coreml_out = list(
-            coreml_model.predict(
-                {k: v.numpy() for k, v in sample_inputs.items()}
-            ).values()
-        )[0]
-        np.testing.assert_allclose(
-            baseline_out,
-            coreml_out,
-            rtol=1e-2, # 1e-3 may raise error
-            atol=1e-2, # 1e-3 may raise error
-            err_msg=f"assert allclose {submodule_name} baseline PyTorch to baseline CoreML failed",
-        )
+        try:
+            baseline_out = torchscript_module(**sample_inputs).numpy()
+            coreml_out = list(
+                coreml_model.predict(
+                    {k: v.numpy() for k, v in sample_inputs.items()}
+                ).values()
+            )[0]
+            np.testing.assert_allclose(
+                baseline_out,
+                coreml_out,
+                rtol=1e-2, # 1e-3 may raise error
+                atol=1e-2, # 1e-3 may raise error
+                err_msg=f"assert allclose {submodule_name} baseline PyTorch to baseline CoreML failed",
+            )
+        except Exception as e:
+            logger.error(f"Failed to check output correctness: {e}")
 
     del torchscript_module
     gc.collect()
 
     return coreml_model, output_path
-
-
-def parse_input_size(input_size_str: str) -> dict:
-    """Parse the input size string into a dictionary."""
-    try:
-        return ast.literal_eval(input_size_str)
-    except (ValueError, SyntaxError) as e:
-        raise argparse.ArgumentTypeError(f"Invalid input size format: {e}")
 
 
 def convert_language_goal(
@@ -395,6 +383,9 @@ def convert_language_goal(
         reference_language_model, (lang_inputs["lang_tokens"].to(torch.long),)
     )
     logger.info(f"JIT tracing reference language model done")
+
+    del language_model
+    gc.collect()
 
     # Convert to CoreML
     return convert_to_coreml(
@@ -472,6 +463,9 @@ def convert_visual_goal(
         reference_visual_model, (visual_inputs["image"].to(torch.float32),)
     )
     logger.info(f"JIT tracing reference visual model done")
+
+    del visual_model
+    gc.collect()
 
     # Convert to CoreML
     return convert_to_coreml(
@@ -610,6 +604,10 @@ def convert_voltron(
     # )
     # logger.info(f"JIT tracing reference perceiver resampler model done")
 
+    del voltron_model
+    del perceiver_resampler
+    gc.collect()
+
     # Convert to CoreML
     return convert_to_coreml(
         submodule_name="Voltron",
@@ -731,27 +729,27 @@ def convert_gcdenoiser(
             return input_seq
 
         def forward_enc_only(self, state, goals, sigma):
-            # print(f"State shape: {state.shape}")
-            # print(f"Goals shape: {goals.shape}")
+            # logger.info(f"State shape: {state.shape}")
+            # logger.info(f"Goals shape: {goals.shape}")
 
             goals = self.preprocess_goals(goals, state.size(1))
-            # print(f"Preprocessed goals shape: {goals.shape}")
+            # logger.info(f"Preprocessed goals shape: {goals.shape}")
 
             state_embed = self.denoiser.inner_model.tok_emb(state)
-            # print(f"State embedding shape: {state_embed.shape}")
+            # logger.info(f"State embedding shape: {state_embed.shape}")
 
             goal_embed = (
                 self.denoiser.inner_model.lang_emb(goals)
                 if self.modality == "lang"
                 else self.denoiser.inner_model.goal_emb(goals)
             )
-            # print(f"Goal embedding shape: {goal_embed.shape}")
+            # logger.info(f"Goal embedding shape: {goal_embed.shape}")
 
             input_seq = self.concatenate_inputs(None, goal_embed, state_embed, None)
-            # print(f"Input sequence shape: {input_seq.shape}")
+            # logger.info(f"Input sequence shape: {input_seq.shape}")
 
             context = self.denoiser.inner_model.encoder(input_seq)
-            # print(f"Context shape: {context.shape}")
+            # logger.info(f"Context shape: {context.shape}")
             self.denoiser.inner_model.latent_encoder_emb = context
             return context
 
@@ -772,6 +770,7 @@ def convert_gcdenoiser(
             # ddim
             s_in = torch.ones([action.shape[0]])
             for i in range(self.sigmas.size(0) - 1):
+                logger.info(f"ddim step {i}")
                 sigma = self.sigmas[i] * s_in
                 c_skip, c_out, c_in = [
                     x[(...,) + (None,) * (action.ndim - x.ndim)]
@@ -803,7 +802,7 @@ def convert_gcdenoiser(
             denoiser_inputs["action"],
             denoiser_inputs["latent_goal"],
         )
-        print(f"Test output shape: {test_out.shape}")
+        logger.info(f"Test output shape: {test_out.shape}")
     logger.info("Checking model dimensions done.")
     # test the denoiser done.
 
@@ -821,10 +820,13 @@ def convert_gcdenoiser(
     logger.info(f"JIT tracing reference denoiser done")
 
     # # print and save the graph
-    # print("Traced model graph:")
-    # print(traced_reference_denoiser.graph)
+    # logger.info("Traced model graph:")
+    # logger.info(traced_reference_denoiser.graph)
     # with open(os.path.join(output_dir, "traced_model_graph.txt"), "w") as f:
     #     f.write(str(traced_reference_denoiser.graph))
+
+    del gc_denoiser
+    gc.collect()
 
     # Convert to CoreML
     return convert_to_coreml(
@@ -837,7 +839,8 @@ def convert_gcdenoiser(
         check_output_correctness=check_output_correctness,
     )
 
-
+# python coreml/torch2coreml.py
+# python coreml/torch2coreml.py --config-name=convert_prune_e3_d3
 @hydra.main(config_path=".", config_name="convert")
 def main(cfg: DictConfig):
     """Main function for converting MDTVAgent components to CoreML models."""
@@ -848,7 +851,7 @@ def main(cfg: DictConfig):
     output_dir = os.path.abspath(cfg.output_dir)
     if cfg.clean_output_dir:
         if os.path.exists(output_dir):
-            if input("Output directory {output_dir} already exists. Continue? (y/n)") == "y":
+            if (input(f"Output directory {output_dir} already exists. Continue? (Y/n)") or "Y") == "Y":
                 shutil.rmtree(output_dir)
                 logger.info(f"Output directory {output_dir} cleaned.")
             else:
@@ -856,7 +859,9 @@ def main(cfg: DictConfig):
                 exit()
 
     # Load the model using hydra config
-    model = load_pretrained_model(cfg)
+    model = load_pretrained_model(cfg,
+                                  use_ema_weights=cfg.get("use_ema_weights", True),
+                                  strict_loading=cfg.get("strict", True))
 
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)

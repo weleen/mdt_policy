@@ -5,6 +5,10 @@ eval_cfg_overwrite:
         lang_folder: lang_annotations
   overwrite_module_cfg:
     voltron_cache: /Users/wuyiming/Project/MyProjects/LightVLA/pretrained_models/mdt/vcache
+    model:
+      inner_model:
+        n_dec_layers: 3
+        n_enc_layers: 3
 
 train_folder: /Users/wuyiming/Project/MyProjects/LightVLA//pretrained_models/mdt/CALVIN D/mdtv_3_d
 ep_len: 360
@@ -23,14 +27,17 @@ noise_scheduler: exponential
 
 # coreml
 convert_voltron: True 
-convert_language_goal: True
-convert_visual_goal: True
+convert_language_goal: False
+convert_visual_goal: False
 convert_gcdenoiser: True 
-output_dir: mdt_mlpackage
+output_dir: mdt_prune_e3_d3_mlpackage
 check_output_correctness: True # bug
 compute_unit: "ALL"
 clean_output_dir: False 
 bundle_resources: False
+# checkpoint loading
+use_ema_weights: False
+strict: False
 
 hydra:
   run:
