@@ -62,7 +62,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mdt.models.mdtv_agent import MDTVAgent
 from mdt.models.networks.mdtv_transformer import MDTVTransformer
 from mdt.models.networks.transformers.perceiver_resampler import PerceiverResampler
-
+from mdt.models.edm_diffusion.gc_sampling import sample_ddim, get_sigmas_exponential
 
 def _get_out_path(output_dir, submodule_name):
     fname = f"MDT_{submodule_name}.mlpackage"
@@ -315,6 +315,217 @@ def convert_to_coreml(
 
     return coreml_model, output_path
 
+def convert_all(
+    model: MDTVAgent,
+    input_shapes: dict,
+    output_dir: str,
+    compute_unit: str = "ALL",
+    check_output_correctness: bool = False,
+) -> str:
+    """
+    Convert all models (language goal, visual goal, voltron, gc denoiser) to CoreML.
+    examples/mdt/mdt/models/mdtv_agent.py
+    """
+    logger.info("Converting all models (language goal, visual goal, voltron, gc denoiser) to CoreML...")
+
+    # Define output path
+    output_path = _get_out_path(output_dir, "all")
+
+    if os.path.exists(output_path):
+        logger.info(f"Model already exists at {output_path}. Skipping conversion.")
+        return
+
+    # Define model from the MDTVAgent
+    model.language_goal.eval() # LangCLIP
+    # model.visual_goal.eval() # DefaultVisionClip, in calvin evaluation, it is not used.
+    model.img_encoder.eval() # Voltron
+    model.perceiver.eval() # PerceiverResampler
+    model.model.eval() # GCDenoiser
+
+    # Define input shapes
+    # Define the token sequence length
+    sequence_length = input_shapes.get("sequence_length")  # Default CLIP token length
+    bs = input_shapes.get("bs")
+    from mdt.models.networks.clip import _tokenizer
+
+    # sot_token = _tokenizer.encoder["<|startoftext|>"]
+    eot_token = _tokenizer.encoder["<|endoftext|>"]
+    agent_inputs = {
+        # goal
+        # "lang_text": 'take the blue block and rotate it to the right',
+        "lang_tokens": torch.randint(
+            0, eot_token + 1, (bs, sequence_length)
+        ),  # (batch_size, sequence_length)
+        # observation
+        # rgb_obs
+        "rgb_static": torch.randn(bs, 1, 3, 224, 224),
+        "rgb_gripper": torch.randn(bs, 1, 3, 84, 84),
+        # robot_obs
+        # "robot_obs": torch.randn(bs, 1, 8),
+        # depth_obs # empty
+        # robot_obs_raw
+        # "robot_obs_raw": torch.randn(15)
+    }
+    sigmas = model.get_noise_schedule(model.num_sampling_steps, "exponential")
+    action_dim = input_shapes.get("action_dim")
+
+    agent_inputs_spec = {k: (v.shape, v.dtype) for k, v in agent_inputs.items()}
+    logger.info(f"Agent sample inputs spec: {agent_inputs_spec}")
+
+    # Define output names
+    output_names = ["pred_action_seq"]
+
+    class AgentModelWrapper(torch.nn.Module):
+        def __init__(self, model, sigmas, action_dim):
+            super().__init__()
+            self.language_goal = model.language_goal
+            self.img_encoder = model.img_encoder
+            self.perceiver = model.perceiver
+            self.denoiser = model.model
+
+            self.noise_scheduler = model.noise_scheduler
+            self.num_sampling_steps = model.num_sampling_steps # 10 for ddim
+            self.act_window_size = model.act_window_size
+            self.sigmas = sigmas
+            self.sigma_fn = lambda t: t.neg().exp()
+            self.t_fn = lambda sigma: sigma.log().neg()
+            self.sigma_min = model.sigma_min
+            self.sigma_max = model.sigma_max
+            self.action_dim = action_dim
+        def compute_voltron_embedding(self, rgb_static, rgb_gripper):
+            rgb_static = einops.rearrange(rgb_static, 'b t c h w -> (b t) c h w')
+            rgb_gripper = einops.rearrange(rgb_gripper, 'b t c h w -> (b t) c h w')
+            static_tokens = self.img_encoder(rgb_static)
+            gripper_tokens = self.img_encoder(rgb_gripper)
+            token_seq = torch.cat([static_tokens, gripper_tokens], dim=1).unsqueeze(1)
+            state_images = self.perceiver(token_seq)
+            return state_images
+
+        def process_sigma_embeddings(self, sigma):
+            sigmas = sigma.log() / 4
+            sigmas = einops.rearrange(sigmas, "b -> b 1")
+            emb_t = self.denoiser.inner_model.sigma_emb(sigmas)
+            if len(emb_t.shape) == 2:
+                emb_t = einops.rearrange(emb_t, "b d -> b 1 d")
+            return emb_t
+
+        def preprocess_goals(self, goals, states_length):
+            if len(goals.shape) == 2:
+                goals = einops.rearrange(goals, "b d -> b 1 d")
+            if (
+                goals.shape[1] == states_length
+                and self.denoiser.inner_model.goal_seq_len == 1
+            ):
+                goals = goals[:, 0, :]
+                goals = einops.rearrange(goals, "b d -> b 1 d")
+            if goals.shape[-1] == 2 * self.denoiser.inner_model.obs_dim:
+                goals = goals[:, :, : self.denoiser.inner_model.obs_dim]
+            return goals
+
+        def concatenate_inputs(self, emb_t, goal_embed, state_embed, proprio_embed):
+            input_seq_components = [state_embed]
+            if self.denoiser.inner_model.goal_conditioned:
+                input_seq_components.insert(0, goal_embed)
+            if proprio_embed is not None:
+                input_seq_components.append(proprio_embed)
+            else:
+                if not self.denoiser.inner_model.goal_conditioned:
+                    input_seq_components.append(
+                        self.denoiser.inner_model.drop(goal_embed)
+                    )
+            if not self.denoiser.inner_model.use_ada_conditioning:
+                input_seq_components.insert(0, emb_t)
+            input_seq = torch.cat(input_seq_components, dim=1)
+            return input_seq
+
+        def forward_enc_only(self, state, goals, sigma):
+            goals = self.preprocess_goals(goals, state.size(1))
+            state_embed = self.denoiser.inner_model.tok_emb(state)
+            goal_embed = self.denoiser.inner_model.lang_emb(goals)
+            input_seq = self.concatenate_inputs(None, goal_embed, state_embed, None)
+            context = self.denoiser.inner_model.encoder(input_seq)
+            self.denoiser.inner_model.latent_encoder_emb = context
+            return context
+
+        def forward_dec_only(self, context, action, sigma):
+            emb_t = self.process_sigma_embeddings(sigma)
+            action_embed = self.denoiser.inner_model.action_emb(action)
+            action_x = self.denoiser.inner_model.drop(action_embed)
+            if self.denoiser.inner_model.use_ada_conditioning:
+                x = self.denoiser.inner_model.decoder(action_x, emb_t, context)
+            else:
+                x = self.denoiser.inner_model.decoder(action_x, context)
+            pred_action = self.denoiser.inner_model.action_pred(x)
+            return pred_action
+
+        def denoise_actions(self, latent_goal, state_images):
+            # ddim
+            action = torch.randn((bs, self.act_window_size, self.action_dim))
+            s_in = torch.ones([action.shape[0]])
+            for i in range(self.sigmas.size(0) - 1):
+                logger.info(f"ddim step {i}")
+                sigma = self.sigmas[i] * s_in
+                c_skip, c_out, c_in = [
+                    x[(...,) + (None,) * (action.ndim - x.ndim)]
+                    for x in self.denoiser.get_scalings(sigma)
+                ]
+                # customized inner_model
+                action_in = action * c_in
+                # forward_enc_only
+                context = self.forward_enc_only(state_images, latent_goal, sigma)
+                # forward_dec_only
+                pred_action = self.forward_dec_only(context, action_in, sigma)
+                denoised = pred_action * c_out + action * c_skip
+                # post process
+                t, t_next = self.t_fn(self.sigmas[i]), self.t_fn(self.sigmas[i + 1])
+                h = t_next - t
+                action = (self.sigma_fn(t_next) / self.sigma_fn(t)) * action - (
+                    -h
+                ).expm1() * denoised
+            return action
+        def forward(self, lang_tokens, rgb_static, rgb_gripper):
+            # get latent_goal
+            # tokenzie func in LangCLIP, check if it should be unwraped
+            latent_goal = self.language_goal.clip_rn50.encode_text(lang_tokens).unsqueeze(1).to(torch.float32) # (bs, 1, 512)
+            # compute voltron embedding
+            state_images = self.compute_voltron_embedding(rgb_static, rgb_gripper) # (bs, 3, 384)
+            # get action sequence
+            action_seq = self.denoise_actions(latent_goal, state_images)
+            return action_seq
+
+    # test the agent model
+    logger.info("Checking model dimensions...")
+    test_agent = AgentModelWrapper(model, sigmas, action_dim).eval()
+    with torch.no_grad():
+        test_out = test_agent(
+            agent_inputs["lang_tokens"],
+            agent_inputs["rgb_static"],
+            agent_inputs["rgb_gripper"],
+        )
+        logger.info(f"Test output shape: {test_out.shape}")
+    logger.info("Checking model dimensions done.")
+    # test the denoiser done.
+
+    reference_agent_model = AgentModelWrapper(model, sigmas, action_dim).eval()
+    logger.info(f"JIT tracing reference agent model...")
+    traced_reference_agent_model = torch.jit.trace(
+        reference_agent_model,
+        (agent_inputs["lang_tokens"], agent_inputs["rgb_static"], agent_inputs["rgb_gripper"])
+    )
+    logger.info(f"JIT tracing reference agent model done")
+    
+    del model
+    gc.collect()
+    
+    return convert_to_coreml(
+        submodule_name="all",
+        torchscript_module=traced_reference_agent_model,
+        sample_inputs=agent_inputs,
+        output_names=output_names,
+        output_dir=output_dir,
+        compute_unit=compute_unit,
+        check_output_correctness=check_output_correctness,
+    )
 
 def convert_language_goal(
     model: MDTVAgent,
@@ -533,19 +744,19 @@ def convert_voltron(
         ),  # (batch, channels, height, width)
     }
 
-    perceiver_resampler_inputs = {
-        "token_seq": torch.randn(bs, 1, 392, 384)  # (batch, num_tokens, channels)
-    }
-
     voltron_inputs_spec = {k: (v.shape, v.dtype) for k, v in voltron_inputs.items()}
     logger.info(f"Voltron sample inputs spec: {voltron_inputs_spec}")
 
-    perceiver_resampler_inputs_spec = {
-        k: (v.shape, v.dtype) for k, v in perceiver_resampler_inputs.items()
-    }
-    logger.info(
-        f"PerceiverResampler sample inputs spec: {perceiver_resampler_inputs_spec}"
-    )
+    # perceiver_resampler_inputs = {
+    #     "token_seq": torch.randn(bs, 1, 392, 384)  # (batch, num_tokens, channels)
+    # }
+
+    # perceiver_resampler_inputs_spec = {
+    #     k: (v.shape, v.dtype) for k, v in perceiver_resampler_inputs.items()
+    # }
+    # logger.info(
+    #     f"PerceiverResampler sample inputs spec: {perceiver_resampler_inputs_spec}"
+    # )
 
     class VoltronModelWrapper(torch.nn.Module):
         def __init__(self, voltron_model, perceiver_resampler, lang, lang_mask):
@@ -570,7 +781,7 @@ def convert_voltron(
             )  # equal to self.vcond(rgb_gripper, mode='visual')
             token_seq = torch.cat([static_tokens, gripper_tokens], dim=1).unsqueeze(1)
             state_images = self.perceiver_resampler(token_seq)
-            return token_seq
+            return state_images
 
     # class PerceiverResamplerModelWrapper(torch.nn.Module):
     #     def __init__(self, perceiver_resampler):
@@ -613,7 +824,7 @@ def convert_voltron(
         submodule_name="Voltron",
         torchscript_module=traced_reference_voltron_model,
         sample_inputs=voltron_inputs,
-        output_names=["token_seq"],
+        output_names=["state_images"],
         output_dir=output_dir,
         compute_unit=compute_unit,
         check_output_correctness=check_output_correctness,
@@ -840,7 +1051,18 @@ def convert_gcdenoiser(
     )
 
 # python coreml/torch2coreml.py
+# python coreml/torch2coreml.py --config-name=convert_prune_e4_d3
+# python coreml/torch2coreml.py --config-name=convert_prune_e4_d2
+# python coreml/torch2coreml.py --config-name=convert_prune_e4_d1
 # python coreml/torch2coreml.py --config-name=convert_prune_e3_d3
+# python coreml/torch2coreml.py --config-name=convert_prune_e3_d2
+# python coreml/torch2coreml.py --config-name=convert_prune_e3_d1
+# python coreml/torch2coreml.py --config-name=convert_prune_e2_d3
+# python coreml/torch2coreml.py --config-name=convert_prune_e2_d2
+# python coreml/torch2coreml.py --config-name=convert_prune_e2_d1
+# python coreml/torch2coreml.py --config-name=convert_prune_e1_d3
+# python coreml/torch2coreml.py --config-name=convert_prune_e1_d2
+# python coreml/torch2coreml.py --config-name=convert_prune_e1_d1
 @hydra.main(config_path=".", config_name="convert")
 def main(cfg: DictConfig):
     """Main function for converting MDTVAgent components to CoreML models."""
@@ -869,6 +1091,7 @@ def main(cfg: DictConfig):
 
     # Get input shapes from config
     input_shapes = {
+        "bs": 1,
         "image_size": cfg.get("image_size", 224),
         "obs_seq_len": cfg.get("obs_seq_len", 1),
         "sequence_length": cfg.get("text_token_sequence_length", 77),
@@ -883,6 +1106,19 @@ def main(cfg: DictConfig):
 
     # Convert requested components
     converted_models = {}
+
+    if cfg.convert_all:
+        logger.info("Converting all models (language goal, visual goal, voltron, gc denoiser) to CoreML...")
+        converted_models["all"] = convert_all(
+            model=model,
+            input_shapes=input_shapes,
+            output_dir=output_dir,
+            compute_unit=cfg.get("compute_unit", "ALL"),
+            check_output_correctness=cfg.get("check_output_correctness", False),
+        )
+        logger.info(
+            f"All models converted and saved to {converted_models['all']}"
+        )
 
     if cfg.convert_language_goal:
         logger.info("Converting Language Goal model to CoreML...")

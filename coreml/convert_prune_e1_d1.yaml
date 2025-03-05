@@ -7,8 +7,8 @@ eval_cfg_overwrite:
     voltron_cache: /Users/wuyiming/Project/MyProjects/LightVLA/pretrained_models/mdt/vcache
     model:
       inner_model:
-        n_dec_layers: 3
-        n_enc_layers: 3
+        n_dec_layers: 1
+        n_enc_layers: 1
 
 train_folder: /Users/wuyiming/Project/MyProjects/LightVLA//pretrained_models/mdt/CALVIN D/mdtv_3_d
 ep_len: 360
@@ -31,7 +31,7 @@ convert_voltron: False
 convert_language_goal: False
 convert_visual_goal: False
 convert_gcdenoiser: False 
-output_dir: mdt_prune_e3_d3_mlpackage
+output_dir: mdt_prune_e1_d1_mlpackage
 check_output_correctness: True # bug
 compute_unit: "ALL"
 clean_output_dir: False 
