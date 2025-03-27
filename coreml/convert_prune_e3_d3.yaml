@@ -26,11 +26,11 @@ sigma_max: 80
 noise_scheduler: exponential
 
 # coreml
-convert_all: True
-convert_voltron: False 
+convert_all: False 
+convert_voltron: False
 convert_language_goal: False
 convert_visual_goal: False
-convert_gcdenoiser: False 
+convert_gcdenoiser: True 
 output_dir: mdt_prune_e3_d3_mlpackage
 check_output_correctness: True # bug
 compute_unit: "ALL"

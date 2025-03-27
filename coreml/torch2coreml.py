@@ -506,6 +506,18 @@ def convert_all(
     logger.info("Checking model dimensions done.")
     # test the denoiser done.
 
+    # calculate the number of parameters in the model
+    num_params = sum(p.numel() for p in test_agent.parameters())
+    logger.info(f"Number of parameters in the model: {num_params / 1e6}M")
+
+    # calculate the FLOPs of the model
+    from thop import profile
+    flops = profile(test_agent, inputs=(agent_inputs["lang_tokens"], agent_inputs["rgb_static"], agent_inputs["rgb_gripper"]))
+    # import pdb; pdb.set_trace()
+    logger.info(f"FLOPs of the model: {flops[0] / 1e9}GFLOPs")
+    # log the memory usage of the model
+    import pdb; pdb.set_trace()
+
     reference_agent_model = AgentModelWrapper(model, sigmas, action_dim).eval()
     logger.info(f"JIT tracing reference agent model...")
     traced_reference_agent_model = torch.jit.trace(
@@ -981,7 +993,7 @@ def convert_gcdenoiser(
             # ddim
             s_in = torch.ones([action.shape[0]])
             for i in range(self.sigmas.size(0) - 1):
-                logger.info(f"ddim step {i}")
+                # logger.info(f"ddim step {i}")
                 sigma = self.sigmas[i] * s_in
                 c_skip, c_out, c_in = [
                     x[(...,) + (None,) * (action.ndim - x.ndim)]
@@ -1017,6 +1029,18 @@ def convert_gcdenoiser(
     logger.info("Checking model dimensions done.")
     # test the denoiser done.
 
+    # calculate the number of parameters in the model
+    num_params = sum(p.numel() for p in test_denoiser.parameters())
+    logger.info(f"Number of parameters in the model: {num_params / 1e6}M")
+
+    # calculate the FLOPs of the model
+    from thop import profile
+    flops = profile(test_denoiser, inputs=(denoiser_inputs["state_images"], denoiser_inputs["action"], denoiser_inputs["latent_goal"]))
+    # import pdb; pdb.set_trace()
+    logger.info(f"FLOPs of the model: {flops[0] / 1e9}GFLOPs")
+    # log the memory usage of the model
+    import pdb; pdb.set_trace()
+
     logger.info(f"JIT tracing reference denoiser...")
     traced_reference_denoiser = torch.jit.trace(
         reference_denoiser,
@@ -1051,17 +1075,8 @@ def convert_gcdenoiser(
     )
 
 # python coreml/torch2coreml.py
-# python coreml/torch2coreml.py --config-name=convert_prune_e4_d3
-# python coreml/torch2coreml.py --config-name=convert_prune_e4_d2
-# python coreml/torch2coreml.py --config-name=convert_prune_e4_d1
 # python coreml/torch2coreml.py --config-name=convert_prune_e3_d3
-# python coreml/torch2coreml.py --config-name=convert_prune_e3_d2
-# python coreml/torch2coreml.py --config-name=convert_prune_e3_d1
-# python coreml/torch2coreml.py --config-name=convert_prune_e2_d3
 # python coreml/torch2coreml.py --config-name=convert_prune_e2_d2
-# python coreml/torch2coreml.py --config-name=convert_prune_e2_d1
-# python coreml/torch2coreml.py --config-name=convert_prune_e1_d3
-# python coreml/torch2coreml.py --config-name=convert_prune_e1_d2
 # python coreml/torch2coreml.py --config-name=convert_prune_e1_d1
 @hydra.main(config_path=".", config_name="convert")
 def main(cfg: DictConfig):
@@ -1101,7 +1116,7 @@ def main(cfg: DictConfig):
         "perceiver_dim": 384,
         "act_window_size": 10,
         "action_dim": 7,
-        "num_sampling_steps": 10,
+        "num_sampling_steps": 4,
     }
 
     # Convert requested components
